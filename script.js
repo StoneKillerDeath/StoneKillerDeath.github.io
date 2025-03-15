@@ -1,79 +1,50 @@
-// Select DOM elements
+// Select game elements
 const gameArea = document.getElementById("game-area");
 const player = document.getElementById("player");
-const wall = document.getElementById("wall");
 const healthBar = document.getElementById("health-bar");
 const wallHealthBar = document.getElementById("wall-health-bar");
 const coinCounter = document.getElementById("coin-counter");
-const upgradeMenu = document.getElementById("upgrade-menu");
-const upgradeButton = document.getElementById("upgrade-button");
-const closeUpgradeMenu = document.getElementById("close-upgrade-menu");
-const restartButton = document.getElementById("restart-button");
 
-// Game variables
 let coins = 0;
 let health = 10;
 let wallHealth = 20;
-let position = 50; // Player position in percentage
-let playerSpeed = 0.5;
+let position = 50; // Player's initial horizontal position in percentage
 let bulletSpeed = 7;
 const maxEnemies = 4;
-const enemySpeed = 1; // Speed of enemy movement
-const enemyBulletSpeed = 3;
-let moveDirection = null;
-let moveInterval = null;
-let gamePaused = false;
 let enemies = [];
+let gamePaused = false;
 
 // Display initial stats
 healthBar.textContent = `Health: ${health}`;
 wallHealthBar.textContent = `Wall Health: ${wallHealth}`;
 coinCounter.textContent = `Coins: ${coins}`;
 
-// Function to start player movement
-function startMoving() {
-    if (!moveInterval) {
-        moveInterval = setInterval(() => {
-            if (moveDirection === "left" && position > 0) {
-                position -= playerSpeed;
-            } else if (moveDirection === "right" && position < 100) {
-                position += playerSpeed;
-            }
-            player.style.left = position + "%";
-        }, 10);
-    }
-}
-
-// Function to stop player movement
-function stopMoving() {
-    clearInterval(moveInterval);
-    moveInterval = null;
-    moveDirection = null;
-}
-
-// Movement controls
-document.addEventListener("keydown", (event) => {
+// Shooting on screen touch
+gameArea.addEventListener("click", () => {
     if (!gamePaused) {
-        if ((event.key === "ArrowLeft" || event.key === "a") && moveDirection !== "left") {
-            moveDirection = "left";
-            startMoving();
-        } else if ((event.key === "ArrowRight" || event.key === "d") && moveDirection !== "right") {
-            moveDirection = "right";
-            startMoving();
-        }
+        shootBullet(); // Shoot when the screen is tapped
     }
 });
 
-document.addEventListener("keyup", () => stopMoving());
+// Player follows finger on drag
+gameArea.addEventListener("touchmove", (event) => {
+    if (!gamePaused) {
+        const touchX = event.touches[0].clientX; // Get finger position
+        const gameAreaRect = gameArea.getBoundingClientRect();
+        const gameWidth = gameAreaRect.width;
+
+        // Calculate percentage-based position
+        position = ((touchX - gameAreaRect.left) / gameWidth) * 100;
+
+        // Clamp the player's position to stay within the game area
+        if (position < 0) position = 0;
+        if (position > 100) position = 100;
+
+        player.style.left = position + "%"; // Move the player horizontally
+    }
+});
 
 // Function to shoot bullets
-document.addEventListener("mousedown", () => {
-    if (!gamePaused) {
-        const shootingInterval = setInterval(() => shootBullet(), 200); // Shoot every 200ms
-        document.addEventListener("mouseup", () => clearInterval(shootingInterval), { once: true });
-    }
-});
-
 function shootBullet() {
     const bullet = document.createElement("div");
     bullet.classList.add("bullet");
@@ -85,7 +56,6 @@ function shootBullet() {
     const interval = setInterval(() => {
         bullet.style.top = bullet.offsetTop - bulletSpeed + "px";
 
-        // Check collision with enemies
         enemies.forEach((enemy, index) => {
             if (enemy && checkCollision(bullet, enemy)) {
                 bullet.remove();
@@ -94,7 +64,7 @@ function shootBullet() {
                 enemies.splice(index, 1);
                 coins++;
                 coinCounter.textContent = `Coins: ${coins}`;
-                spawnEnemy(); // Replace the enemy
+                spawnEnemy(); // Replace the destroyed enemy
             }
         });
 
@@ -105,38 +75,38 @@ function shootBullet() {
     }, 20);
 }
 
-// Spawn enemies at the top
+// Spawning enemies
 function spawnEnemy() {
     if (enemies.length < maxEnemies) {
         const enemy = document.createElement("div");
         enemy.classList.add("enemy");
-        enemy.style.left = Math.random() * 90 + "%"; // Random horizontal position
-        enemy.style.top = "10px"; // Position at the top
+        enemy.style.left = Math.random() * 90 + "%"; // Random position along the top
+        enemy.style.top = "10px"; // Fixed vertical position
         gameArea.appendChild(enemy);
         enemies.push(enemy);
 
-        moveEnemy(enemy);
-        shootEnemyBullet(enemy);
+        moveEnemy(enemy); // Make the enemy move left and right
+        shootEnemyBullet(enemy); // Enemies start shooting
     }
 }
 
 // Move enemies left and right
 function moveEnemy(enemy) {
-    let direction = Math.random() > 0.5 ? 1 : -1; // Random initial direction
+    let direction = Math.random() > 0.5 ? 1 : -1; // Randomize starting direction
     const interval = setInterval(() => {
         if (!gamePaused) {
             const enemyLeft = parseFloat(enemy.style.left);
-            if (enemyLeft <= 0 || enemyLeft >= 90) direction *= -1; // Reverse direction at edges
-            enemy.style.left = enemyLeft + direction * enemySpeed + "%";
+            if (enemyLeft <= 0 || enemyLeft >= 90) direction *= -1; // Reverse direction if hitting boundaries
+            enemy.style.left = enemyLeft + direction + "%";
         }
 
         if (!document.body.contains(enemy)) {
-            clearInterval(interval);
+            clearInterval(interval); // Stop moving if the enemy is destroyed
         }
     }, 100);
 }
 
-// Enemy shooting
+// Enemy shooting logic
 function shootEnemyBullet(enemy) {
     const shootingInterval = setInterval(() => {
         if (!gamePaused) {
@@ -148,7 +118,7 @@ function shootEnemyBullet(enemy) {
             gameArea.appendChild(bullet);
 
             const interval = setInterval(() => {
-                bullet.style.top = bullet.offsetTop + enemyBulletSpeed + "px";
+                bullet.style.top = bullet.offsetTop + 3 + "px";
 
                 // Check collision with wall
                 if (checkCollision(bullet, wall)) {
@@ -174,17 +144,7 @@ function shootEnemyBullet(enemy) {
                 clearInterval(shootingInterval);
             }
         }
-    }, 3000); // Shoot every 3 seconds
-}
-
-// Reduce wall health
-function reduceWallHealth() {
-    wallHealth--;
-    wallHealthBar.textContent = `Wall Health: ${wallHealth}`;
-    if (wallHealth <= 0) {
-        wall.style.display = "none"; // Hide the wall
-        wallHealthBar.style.display = "none";
-    }
+    }, 3000); // Enemies shoot every 3 seconds
 }
 
 // Reduce player health
@@ -196,22 +156,22 @@ function reducePlayerHealth() {
     }
 }
 
-// Game over logic
-function gameOver() {
-    gamePaused = true;
-    document.getElementById("game-over-screen").style.display = "block";
+// Reduce wall health
+function reduceWallHealth() {
+    wallHealth--;
+    wallHealthBar.textContent = `Wall Health: ${wallHealth}`;
+    if (wallHealth <= 0) {
+        wall.style.display = "none";
+        wallHealthBar.style.display = "none";
+        alert("The wall has exploded!");
+    }
 }
 
-// Upgrade menu logic
-upgradeButton.addEventListener("click", () => {
-    gamePaused = true;
-    upgradeMenu.style.display = "flex";
-});
-
-closeUpgradeMenu.addEventListener("click", () => {
-    upgradeMenu.style.display = "none";
-    gamePaused = false;
-});
+// Game over logic
+function gameOver() {
+    alert("Game Over!");
+    location.reload(); // Restart the game
+}
 
 // Collision detection
 function checkCollision(obj1, obj2) {
@@ -228,134 +188,6 @@ function checkCollision(obj1, obj2) {
 // Initial enemy spawn
 setInterval(spawnEnemy, 2000); // Spawn enemies every 2 seconds
 
-// Restart Button Functionality
-restartButton.addEventListener("click", () => {
-    // Reload the page to restart the game
-    location.reload();
-});
-
-let bulletSpeedLevel = 0;
-let playerSpeedLevel = 0;
-let playerHealthLevel = 0;
-let wallHealthLevel = 0;
-
-// Bullet Speed Upgrade
-bulletSpeedUpgrade.addEventListener("click", () => {
-    if (coins >= 50) {
-        coins = 0; // Reset coins to 0 after purchase
-        bulletSpeed += 0.2; // Increase bullet speed
-        bulletSpeedLevel++; // Increment level
-        coinCounter.textContent = `Coins: ${coins}`;
-        bulletSpeedUpgrade.textContent = `+0.2 Bullet Speed (Level ${bulletSpeedLevel})`; // Update button text
-        alert("Bullet speed increased!");
-    } else {
-        alert("Not enough coins!");
-    }
-});
-
-// Player Speed Upgrade
-playerSpeedUpgrade.addEventListener("click", () => {
-    if (coins >= 80) {
-        coins = 0;
-        playerSpeed += 0.2;
-        playerSpeedLevel++;
-        coinCounter.textContent = `Coins: ${coins}`;
-        playerSpeedUpgrade.textContent = `+0.2 Player Speed (Level ${playerSpeedLevel})`;
-        alert("Player speed increased!");
-    } else {
-        alert("Not enough coins!");
-    }
-});
-
-// Player Health Upgrade
-playerHealthUpgrade.addEventListener("click", () => {
-    if (coins >= 100) {
-        coins = 0;
-        health = 15; // Set player health to 15
-        playerHealthLevel++;
-        healthBar.textContent = `Health: ${health}`; // Update health bar
-        coinCounter.textContent = `Coins: ${coins}`;
-        playerHealthUpgrade.textContent = `Set Health to 15 (Level ${playerHealthLevel})`;
-        alert("Player health restored to 15!");
-    } else {
-        alert("Not enough coins!");
-    }
-});
-
-// Wall Health Upgrade
-wallHealthUpgrade.addEventListener("click", () => {
-    if (coins >= 100) {
-        coins = 0;
-        wallHealth = 30; // Set wall health to 30
-        wallHealthLevel++;
-        wallHealthBar.textContent = `Wall Health: ${wallHealth}`; // Update wall health bar
-        coinCounter.textContent = `Coins: ${coins}`;
-        wallHealthUpgrade.textContent = `Set Wall Health to 30 (Level ${wallHealthLevel})`;
-        alert("Wall health increased to 30!");
-    } else {
-        alert("Not enough coins!");
-    }
-});
-
-coinCounter.textContent = `Coins: ${coins}`;
-
-// Bullet Speed Upgrade
-bulletSpeedUpgrade.addEventListener("click", () => {
-    if (coins >= 50) {
-        coins = 0; // Reset coins to 0 after purchase
-        bulletSpeed += 0.2; // Increase bullet speed
-        bulletSpeedLevel++; // Increment level
-        coinCounter.textContent = `Coins: ${coins}`;
-        bulletSpeedUpgrade.textContent = `+0.2 Bullet Speed (Level ${bulletSpeedLevel})`; // Update button text
-        alert("Bullet speed increased!");
-    } else {
-        alert("Not enough coins!");
-    }
-});
-
-// Player Speed Upgrade
-playerSpeedUpgrade.addEventListener("click", () => {
-    if (coins >= 80) {
-        coins = 0;
-        playerSpeed += 0.2;
-        playerSpeedLevel++;
-        coinCounter.textContent = `Coins: ${coins}`;
-        playerSpeedUpgrade.textContent = `+0.2 Player Speed (Level ${playerSpeedLevel})`;
-        alert("Player speed increased!");
-    } else {
-        alert("Not enough coins!");
-    }
-});
-
-// Player Health Upgrade
-playerHealthUpgrade.addEventListener("click", () => {
-    if (coins >= 100) {
-        coins = 0;
-        health = 15; // Set player health to 15
-        playerHealthLevel++;
-        healthBar.textContent = `Health: ${health}`; // Update health bar
-        coinCounter.textContent = `Coins: ${coins}`;
-        playerHealthUpgrade.textContent = `Set Health to 15 (Level ${playerHealthLevel})`;
-        alert("Player health restored to 15!");
-    } else {
-        alert("Not enough coins!");
-    }
-});
-
-// Wall Health Upgrade
-wallHealthUpgrade.addEventListener("click", () => {
-    if (coins >= 100) {
-        coins = 0;
-        wallHealth = 30; // Set wall health to 30
-        wallHealthLevel++;
-        wallHealthBar.textContent = `Wall Health: ${wallHealth}`; // Update wall health bar
-        coinCounter.textContent = `Coins: ${coins}`;
-        wallHealthUpgrade.textContent = `Set Wall Health to 30 (Level ${wallHealthLevel})`;
-        alert("Wall health increased to 30!");
-    } else {
-        alert("Not enough coins!");
-    }
-});
 
 
 
