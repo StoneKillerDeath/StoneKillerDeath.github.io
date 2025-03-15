@@ -1,0 +1,178 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #111;
+    font-family: Arial, sans-serif;
+    color: white;
+}
+
+#game-area {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    background-color: black;
+    overflow: hidden;
+}
+
+#player {
+    width: 10px;
+    height: 50px;
+    background-color: red;
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 2px;
+}
+
+.enemy {
+    width: 10px;
+    height: 50px;
+    background-color: blue;
+    position: absolute;
+    top: 10px;
+    border-radius: 2px;
+}
+
+.wall {
+    width: 80%;
+    height: 10px;
+    background-color: gray;
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    border-radius: 5px;
+}
+
+.bullet, .enemy-bullet {
+    width: 6px;
+    height: 6px;
+    background-color: yellow;
+    position: absolute;
+    border-radius: 50%;
+}
+
+.enemy-bullet {
+    background-color: orange;
+}
+
+#instructions, #coin-counter {
+    position: absolute;
+    font-size: 16px;
+    z-index: 10;
+}
+
+#instructions {
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#coin-counter {
+    top: 10px;
+    left: 10px;
+}
+
+#health-bar, #wall-health-bar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 16px;
+    z-index: 10;
+}
+
+#wall-health-bar {
+    margin-top: 20px;
+}
+
+#game-over-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-size: 30px;
+    color: white;
+    z-index: 20;
+}
+
+#restart-button {
+    padding: 10px 20px;
+    font-size: 20px;
+    background-color: red;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#restart-button:hover {
+    background-color: darkred;
+}
+
+#upgrade-button {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: green;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#upgrade-button:hover {
+    background-color: darkgreen;
+}
+
+#upgrade-menu {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    border: 2px solid white;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    display: none;
+}
+
+#upgrade-menu button {
+    margin: 10px;
+    padding: 10px 15px;
+    font-size: 14px;
+    background-color: blue;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Wall Style */
+#wall {
+    width: 80%;
+    height: 10px;
+    background-color: gray;
+    position: absolute;
+    top: 50%; /* Place it in the middle of the screen */
+    left: 10%; /* Center horizontally within the game area */
+    border-radius: 5px;
+    z-index: 2; /* Ensure wall is above the background but below bullets */
+}
+
+
+
+
+
+
+
+
