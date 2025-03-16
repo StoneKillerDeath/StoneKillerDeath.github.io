@@ -201,7 +201,6 @@ setInterval(spawnEnemy, 2000); // Spawn enemies every 2 seconds
 
 
 
-
        
 
 
