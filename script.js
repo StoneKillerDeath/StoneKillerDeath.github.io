@@ -1,170 +1,75 @@
-// Canvas Setup
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const restartButton = document.getElementById("restartButton");
-canvas.width = 800;
-canvas.height = 400;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-// Players and Ball properties
-const stickman1 = {
-    x: 50,
-    y: canvas.height / 2 - 50,
-    width: 30,
-    height: 80,
-    color: "blue",
-    moveSpeed: 5,
-};
-
-const stickman2 = {
-    x: canvas.width - 80,
-    y: canvas.height / 2 - 50,
-    width: 30,
-    height: 80,
-    color: "red",
-    moveSpeed: 5,
-};
-
-const ball = {
+// Player details
+const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    radius: 15,
-    color: "white",
-    speedX: 4,
-    speedY: 2,
-    lastHitBy: null, // Tracks who hit the ball last
+    size: 20,
+    speed: 5
 };
 
-let gameOver = false;
-let winner = null;
+// Map offset
+let offsetX = 0;
+let offsetY = 0;
 
-// Controls
+// Trees
+const trees = [
+    { x: 100, y: 200 },
+    { x: 500, y: 300 },
+    { x: 800, y: 600 },
+    { x: 1200, y: 100 },
+    { x: 1500, y: 700 }
+];
+
+// Game controls
 const keys = {};
+document.addEventListener("keydown", (e) => keys[e.key] = true);
+document.addEventListener("keyup", (e) => keys[e.key] = false);
 
-// Event listeners for keypresses
-document.addEventListener("keydown", (e) => {
-    keys[e.key] = true;
-});
-
-document.addEventListener("keyup", (e) => {
-    keys[e.key] = false;
-});
-
-// Draw stickman
-function drawStickman(stickman) {
-    ctx.fillStyle = stickman.color;
-    ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
+// Update function
+function update() {
+    if (keys["ArrowUp"]) offsetY += player.speed;
+    if (keys["ArrowDown"]) offsetY -= player.speed;
+    if (keys["ArrowLeft"]) offsetX += player.speed;
+    if (keys["ArrowRight"]) offsetX -= player.speed;
 }
 
-// Draw ball
-function drawBall() {
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = ball.color;
-    ctx.fill();
-    ctx.closePath();
-}
+// Draw function
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-// Move and check ball collision
-function updateBall() {
-    ball.x += ball.speedX;
-    ball.y += ball.speedY;
+    // Draw player
+    ctx.fillStyle = "red";
+    ctx.fillRect(player.x, player.y, player.size, player.size);
 
-    // Bounce ball off top and bottom walls
-    if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
-        ball.speedY *= -1;
-    }
-
-    // Check collision with stickman1
-    if (
-        ball.x - ball.radius <= stickman1.x + stickman1.width &&
-        ball.x > stickman1.x &&
-        ball.y >= stickman1.y &&
-        ball.y <= stickman1.y + stickman1.height
-    ) {
-        ball.speedX *= -1;
-        ball.lastHitBy = "blue";
-    }
-
-    // Check collision with stickman2
-    if (
-        ball.x + ball.radius >= stickman2.x &&
-        ball.x < stickman2.x + stickman2.width &&
-        ball.y >= stickman2.y &&
-        ball.y <= stickman2.y + stickman2.height
-    ) {
-        ball.speedX *= -1;
-        ball.lastHitBy = "red";
-    }
-
-    // Game over condition: If the ball goes off the left or right side
-    if (ball.x + ball.radius < 0) {
-        gameOver = true;
-        winner = "Red";
-    }
-
-    if (ball.x - ball.radius > canvas.width) {
-        gameOver = true;
-        winner = "Blue";
-    }
-}
-
-// Display Game Over and Restart Button
-function handleGameOver() {
-    ctx.fillStyle = "white";
-    ctx.font = "40px Arial";
-    ctx.fillText(`${winner} Wins!`, canvas.width / 2 - 100, canvas.height / 2 - 20);
-    restartButton.style.display = "block";
+    // Draw trees
+    trees.forEach(tree => {
+        ctx.fillStyle = "green";
+        ctx.beginPath();
+        ctx.arc(tree.x + offsetX, tree.y + offsetY, 30, 0, Math.PI * 2);
+        ctx.fill();
+    });
 }
 
 // Game loop
 function gameLoop() {
-    if (gameOver) {
-        handleGameOver();
-        return;
-    }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Movement logic for stickman1
-    if (keys["w"] && stickman1.y > 0) stickman1.y -= stickman1.moveSpeed; // Move up
-    if (keys["s"] && stickman1.y < canvas.height - stickman1.height) stickman1.y += stickman1.moveSpeed; // Move down
-
-    // Movement logic for stickman2
-    if (keys["ArrowUp"] && stickman2.y > 0) stickman2.y -= stickman2.moveSpeed; // Move up
-    if (keys["ArrowDown"] && stickman2.y < canvas.height - stickman2.height) stickman2.y += stickman2.moveSpeed; // Move down
-
-    // Update and draw ball
-    updateBall();
-    drawBall();
-
-    // Draw players
-    drawStickman(stickman1);
-    drawStickman(stickman2);
-
+    update();
+    draw();
     requestAnimationFrame(gameLoop);
 }
 
-// Restart game logic
-function restartGame() {
-    // Reset positions and states
-    stickman1.y = canvas.height / 2 - 50;
-    stickman2.y = canvas.height / 2 - 50;
-    ball.x = canvas.width / 2;
-    ball.y = canvas.height / 2;
-    ball.speedX = 4;
-    ball.speedY = 2;
-    ball.lastHitBy = null;
-    gameOver = false;
-    winner = null;
-    restartButton.style.display = "none"; // Hide restart button
-    gameLoop();
-}
-
-// Event listener for restart button
-restartButton.addEventListener("click", restartGame);
-
-// Start the game
 gameLoop();
+
+
+
+
+
+
+
+
 
 
 
