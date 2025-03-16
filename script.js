@@ -1,228 +1,170 @@
-// Select game elements
-const gameArea = document.getElementById("game-area");
-const player = document.getElementById("player");
-const healthBar = document.getElementById("health-bar");
-const wallHealthBar = document.getElementById("wall-health-bar");
-const coinCounter = document.getElementById("coin-counter");
+// Canvas Setup
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const restartButton = document.getElementById("restartButton");
+canvas.width = 800;
+canvas.height = 400;
 
-let coins = 0;
-let health = 10;
-let wallHealth = 20;
-let position = 50; // Player's initial horizontal position in percentage
-let bulletSpeed = 7;
-const maxEnemies = 4;
-let enemies = [];
-let gamePaused = false;
+// Players and Ball properties
+const stickman1 = {
+    x: 50,
+    y: canvas.height / 2 - 50,
+    width: 30,
+    height: 80,
+    color: "blue",
+    moveSpeed: 5,
+};
 
-// Display initial stats
-healthBar.textContent = `Health: ${health}`;
-wallHealthBar.textContent = `Wall Health: ${wallHealth}`;
-coinCounter.textContent = `Coins: ${coins}`;
+const stickman2 = {
+    x: canvas.width - 80,
+    y: canvas.height / 2 - 50,
+    width: 30,
+    height: 80,
+    color: "red",
+    moveSpeed: 5,
+};
 
-// Shooting on screen touch
-gameArea.addEventListener("click", () => {
-    if (!gamePaused) {
-        shootBullet(); // Shoot when the screen is tapped
-    }
+const ball = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 15,
+    color: "white",
+    speedX: 4,
+    speedY: 2,
+    lastHitBy: null, // Tracks who hit the ball last
+};
+
+let gameOver = false;
+let winner = null;
+
+// Controls
+const keys = {};
+
+// Event listeners for keypresses
+document.addEventListener("keydown", (e) => {
+    keys[e.key] = true;
 });
 
-// Player follows finger on drag
-gameArea.addEventListener("touchmove", (event) => {
-    if (!gamePaused) {
-        const touchX = event.touches[0].clientX; // Get finger position
-        const gameAreaRect = gameArea.getBoundingClientRect();
-        const gameWidth = gameAreaRect.width;
-
-        // Calculate percentage-based position
-        position = ((touchX - gameAreaRect.left) / gameWidth) * 100;
-
-        // Clamp the player's position to stay within the game area
-        if (position < 0) position = 0;
-        if (position > 100) position = 100;
-
-        player.style.left = position + "%"; // Move the player horizontally
-    }
+document.addEventListener("keyup", (e) => {
+    keys[e.key] = false;
 });
 
-// Function to shoot bullets
-function shootBullet() {
-    const bullet = document.createElement("div");
-    bullet.classList.add("bullet");
-    const rect = player.getBoundingClientRect();
-    bullet.style.left = rect.left + rect.width / 2 - 3 + "px";
-    bullet.style.top = rect.top + "px";
-    gameArea.appendChild(bullet);
-
-    const interval = setInterval(() => {
-        bullet.style.top = bullet.offsetTop - bulletSpeed + "px";
-
-        enemies.forEach((enemy, index) => {
-            if (enemy && checkCollision(bullet, enemy)) {
-                bullet.remove();
-                clearInterval(interval);
-                enemy.remove();
-                enemies.splice(index, 1);
-                coins++;
-                coinCounter.textContent = `Coins: ${coins}`;
-                spawnEnemy(); // Replace the destroyed enemy
-            }
-        });
-
-        if (bullet.offsetTop < 0) {
-            bullet.remove();
-            clearInterval(interval);
-        }
-    }, 20);
+// Draw stickman
+function drawStickman(stickman) {
+    ctx.fillStyle = stickman.color;
+    ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
 }
 
-// Spawning enemies
-function spawnEnemy() {
-    if (enemies.length < maxEnemies) {
-        const enemy = document.createElement("div");
-        enemy.classList.add("enemy");
-        enemy.style.left = Math.random() * 90 + "%"; // Random position along the top
-        enemy.style.top = "10px"; // Fixed vertical position
-        gameArea.appendChild(enemy);
-        enemies.push(enemy);
+// Draw ball
+function drawBall() {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = ball.color;
+    ctx.fill();
+    ctx.closePath();
+}
 
-        moveEnemy(enemy); // Make the enemy move left and right
-        shootEnemyBullet(enemy); // Enemies start shooting
+// Move and check ball collision
+function updateBall() {
+    ball.x += ball.speedX;
+    ball.y += ball.speedY;
+
+    // Bounce ball off top and bottom walls
+    if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
+        ball.speedY *= -1;
+    }
+
+    // Check collision with stickman1
+    if (
+        ball.x - ball.radius <= stickman1.x + stickman1.width &&
+        ball.x > stickman1.x &&
+        ball.y >= stickman1.y &&
+        ball.y <= stickman1.y + stickman1.height
+    ) {
+        ball.speedX *= -1;
+        ball.lastHitBy = "blue";
+    }
+
+    // Check collision with stickman2
+    if (
+        ball.x + ball.radius >= stickman2.x &&
+        ball.x < stickman2.x + stickman2.width &&
+        ball.y >= stickman2.y &&
+        ball.y <= stickman2.y + stickman2.height
+    ) {
+        ball.speedX *= -1;
+        ball.lastHitBy = "red";
+    }
+
+    // Game over condition: If the ball goes off the left or right side
+    if (ball.x + ball.radius < 0) {
+        gameOver = true;
+        winner = "Red";
+    }
+
+    if (ball.x - ball.radius > canvas.width) {
+        gameOver = true;
+        winner = "Blue";
     }
 }
 
-// Move enemies left and right
-function moveEnemy(enemy) {
-    let direction = Math.random() > 0.5 ? 1 : -1; // Randomize starting direction
-    const interval = setInterval(() => {
-        if (!gamePaused) {
-            const enemyLeft = parseFloat(enemy.style.left);
-            if (enemyLeft <= 0 || enemyLeft >= 90) direction *= -1; // Reverse direction if hitting boundaries
-            enemy.style.left = enemyLeft + direction + "%";
-        }
-
-        if (!document.body.contains(enemy)) {
-            clearInterval(interval); // Stop moving if the enemy is destroyed
-        }
-    }, 100);
+// Display Game Over and Restart Button
+function handleGameOver() {
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText(`${winner} Wins!`, canvas.width / 2 - 100, canvas.height / 2 - 20);
+    restartButton.style.display = "block";
 }
 
-// Enemy shooting logic
-function shootEnemyBullet(enemy) {
-    const shootingInterval = setInterval(() => {
-        if (!gamePaused) {
-            const bullet = document.createElement("div");
-            bullet.classList.add("enemy-bullet");
-            const rect = enemy.getBoundingClientRect();
-            bullet.style.left = rect.left + rect.width / 2 - 3 + "px";
-            bullet.style.top = rect.bottom + "px";
-            gameArea.appendChild(bullet);
-
-            const interval = setInterval(() => {
-                bullet.style.top = bullet.offsetTop + 3 + "px";
-
-                // Check collision with wall
-                if (checkCollision(bullet, wall)) {
-                    bullet.remove();
-                    clearInterval(interval);
-                    reduceWallHealth();
-                }
-
-                // Check collision with player
-                if (checkCollision(bullet, player)) {
-                    bullet.remove();
-                    clearInterval(interval);
-                    reducePlayerHealth();
-                }
-
-                if (bullet.offsetTop > window.innerHeight) {
-                    bullet.remove();
-                    clearInterval(interval);
-                }
-            }, 20);
-
-            if (!document.body.contains(enemy)) {
-                clearInterval(shootingInterval);
-            }
-        }
-    }, 3000); // Enemies shoot every 3 seconds
-}
-
-// Reduce player health
-function reducePlayerHealth() {
-    health--;
-    healthBar.textContent = `Health: ${health}`;
-    if (health <= 0) {
-        gameOver();
+// Game loop
+function gameLoop() {
+    if (gameOver) {
+        handleGameOver();
+        return;
     }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Movement logic for stickman1
+    if (keys["w"] && stickman1.y > 0) stickman1.y -= stickman1.moveSpeed; // Move up
+    if (keys["s"] && stickman1.y < canvas.height - stickman1.height) stickman1.y += stickman1.moveSpeed; // Move down
+
+    // Movement logic for stickman2
+    if (keys["ArrowUp"] && stickman2.y > 0) stickman2.y -= stickman2.moveSpeed; // Move up
+    if (keys["ArrowDown"] && stickman2.y < canvas.height - stickman2.height) stickman2.y += stickman2.moveSpeed; // Move down
+
+    // Update and draw ball
+    updateBall();
+    drawBall();
+
+    // Draw players
+    drawStickman(stickman1);
+    drawStickman(stickman2);
+
+    requestAnimationFrame(gameLoop);
 }
 
-// Reduce wall health
-function reduceWallHealth() {
-    wallHealth--;
-    wallHealthBar.textContent = `Wall Health: ${wallHealth}`;
-    if (wallHealth <= 0) {
-        wall.style.display = "none";
-        wallHealthBar.style.display = "none";
-        alert("The wall has exploded!");
-    }
+// Restart game logic
+function restartGame() {
+    // Reset positions and states
+    stickman1.y = canvas.height / 2 - 50;
+    stickman2.y = canvas.height / 2 - 50;
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 2;
+    ball.speedX = 4;
+    ball.speedY = 2;
+    ball.lastHitBy = null;
+    gameOver = false;
+    winner = null;
+    restartButton.style.display = "none"; // Hide restart button
+    gameLoop();
 }
 
-// Game over logic
-function gameOver() {
-    alert("Game Over!");
-    location.reload(); // Restart the game
-}
+// Event listener for restart button
+restartButton.addEventListener("click", restartGame);
 
-// Collision detection
-function checkCollision(obj1, obj2) {
-    const rect1 = obj1.getBoundingClientRect();
-    const rect2 = obj2.getBoundingClientRect();
-    return (
-        rect1.right > rect2.left &&
-        rect1.left < rect2.right &&
-        rect1.bottom > rect2.top &&
-        rect1.top < rect2.bottom
-    );
-}
-
-// Initial enemy spawn
-setInterval(spawnEnemy, 2000); // Spawn enemies every 2 seconds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-       
-
-
-
-       
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// Start the game
+gameLoop();
 
 
 
